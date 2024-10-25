@@ -3,103 +3,119 @@ from tkinter import filedialog
 from PIL import Image, ImageTk, ImageGrab
 import math
 
-
 root = tk.Tk()
 root.title("Вимірювання відстані на карті")
-
 
 canvas = tk.Canvas(root, width=800, height=600, bg="light gray")
 canvas.pack()
 
-
 points = []
+scale_factor = 1.0  
+img = None
+img_tk = None
 
 def load_image():
     """Завантажити зображення з файлу."""
-    global img, img_tk
+    global img, img_tk, scale_factor
     file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.bmp;*.gif")])
     if file_path:
         img = Image.open(file_path)
-        img_tk = ImageTk.PhotoImage(img)
-        canvas.config(width=img_tk.width(), height=img_tk.height())
-        canvas.create_image(0, 0, anchor=tk.NW, image=img_tk)
-        points.clear()
-        result_label.config(text="Відстань: ")
+        scale_factor = 1.0  
+        update_image()
 
 def paste_image():
     """Вставити зображення з буфера обміну."""
-    global img, img_tk
+    global img, img_tk, scale_factor
     img = ImageGrab.grabclipboard()
     if img is not None:
-        img_tk = ImageTk.PhotoImage(img)
-        canvas.config(width=img_tk.width(), height=img_tk.height())
-        canvas.create_image(0, 0, anchor=tk.NW, image=img_tk)
-        points.clear()
-        result_label.config(text="Відстань: ")
+        scale_factor = 1.0  
+        update_image()
     else:
         result_label.config(text="Буфер обміну порожній або не містить зображення.")
 
+def update_image():
+    """Оновити зображення на полотні відповідно до масштабу."""
+    global img_tk
+    if img is not None:
+        img_resized = img.resize((int(img.width * scale_factor), int(img.height * scale_factor)), Image.LANCZOS)
+        img_tk = ImageTk.PhotoImage(img_resized)
+
+        
+        canvas.config(width=img_tk.width(), height=img_tk.height())
+        canvas.create_image(0, 0, anchor=tk.NW, image=img_tk)
+
+        
+        for point in points:
+            
+            scaled_x = point[0] * scale_factor
+            scaled_y = point[1] * scale_factor
+            canvas.create_oval(scaled_x-2, scaled_y-2, scaled_x+2, scaled_y+2, fill='red')
+
+        result_label.config(text=f"Відстань: {calculate_distance():.2f} м")  
+
 def on_click(event):
     if len(points) < 2:
-        points.append((event.x, event.y))
+        
+        points.append((event.x / scale_factor, event.y / scale_factor))  
         canvas.create_oval(event.x-2, event.y-2, event.x+2, event.y+2, fill='red')
-    if len(points) == 2:
-        calculate_distance()
+        if len(points) == 2:
+            result_label.config(text=f"Відстань: {calculate_distance():.2f} м")  
 
 def calculate_distance():
+    if len(points) < 2:
+        return 0  
+
     
     x1, y1 = points[0]
     x2, y2 = points[1]
-
+    
     
     pixel_distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-
     
     try:
         grid_scale_meters = float(scale_entry.get())
     except ValueError:
         result_label.config(text="Введіть коректний масштаб!")
-        return
+        return 0
 
-    
     grid_size_pixels = img.width / 7  
-
-    
     real_distance = (pixel_distance / grid_size_pixels) * grid_scale_meters
-
-    
-    result_label.config(text=f"Відстань: {real_distance:.2f} м")
+    return real_distance
 
 def reset_image():
-    
     canvas.delete("all")
     points.clear()
     result_label.config(text="Відстань: ")
     scale_entry.delete(0, tk.END)
 
+def zoom_in(event):
+    global scale_factor
+    scale_factor *= 1.1  
+    update_image()
+
+def zoom_out(event):
+    global scale_factor
+    scale_factor *= 0.9  
+    update_image()
 
 load_button = tk.Button(root, text="Завантажити зображення", command=load_image)
 load_button.pack()
 
-
 paste_button = tk.Button(root, text="Вставити зображення з буфера обміну", command=paste_image)
 paste_button.pack()
 
-
 reset_button = tk.Button(root, text="Скинути", command=reset_image)
 reset_button.pack()
-
 
 tk.Label(root, text="Масштаб (метрів у клітинці):").pack()
 scale_entry = tk.Entry(root)
 scale_entry.pack()
 
-
 result_label = tk.Label(root, text="Відстань: ")
 result_label.pack()
 
-
 canvas.bind("<Button-1>", on_click)
-
+root.bind("<Up>", zoom_in)   
+root.bind("<Down>", zoom_out) 
 
 root.mainloop()
