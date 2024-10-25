@@ -40,36 +40,31 @@ def update_image():
         img_resized = img.resize((int(img.width * scale_factor), int(img.height * scale_factor)), Image.LANCZOS)
         img_tk = ImageTk.PhotoImage(img_resized)
 
-        
         canvas.config(width=img_tk.width(), height=img_tk.height())
         canvas.create_image(0, 0, anchor=tk.NW, image=img_tk)
 
-        
         for point in points:
-            
             scaled_x = point[0] * scale_factor
             scaled_y = point[1] * scale_factor
             canvas.create_oval(scaled_x-2, scaled_y-2, scaled_x+2, scaled_y+2, fill='red')
 
-        result_label.config(text=f"Відстань: {calculate_distance():.2f} м")  
+        distance = calculate_distance()
+        azimuth = calculate_azimuth()
+        result_label.config(text=f"Відстань: {distance:.2f} м, Азимут: {azimuth:.2f}°")
 
 def on_click(event):
     if len(points) < 2:
-        
         points.append((event.x / scale_factor, event.y / scale_factor))  
         canvas.create_oval(event.x-2, event.y-2, event.x+2, event.y+2, fill='red')
         if len(points) == 2:
-            result_label.config(text=f"Відстань: {calculate_distance():.2f} м")  
+            result_label.config(text=f"Відстань: {calculate_distance():.2f} м, Азимут: {calculate_azimuth():.2f}°")
 
 def calculate_distance():
     if len(points) < 2:
         return 0  
 
-    
     x1, y1 = points[0]
     x2, y2 = points[1]
-    
-    
     pixel_distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
     
     try:
@@ -81,6 +76,25 @@ def calculate_distance():
     grid_size_pixels = img.width / 7  
     real_distance = (pixel_distance / grid_size_pixels) * grid_scale_meters
     return real_distance
+
+def calculate_azimuth():
+    if len(points) < 2:
+        return 0
+
+    x1, y1 = points[0]
+    x2, y2 = points[1]
+
+    # Обчислюємо відносні координати
+    delta_x = x2 - x1
+    delta_y = y2 - y1
+
+    # Обчислення азимута у градусах
+    azimuth = math.degrees(math.atan2(delta_y, delta_x))
+
+    # Додаємо 90 градусів, щоб північ була вгорі
+    azimuth = (azimuth + 90) % 360
+
+    return azimuth
 
 def reset_image():
     canvas.delete("all")
