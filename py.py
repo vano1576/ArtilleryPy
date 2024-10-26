@@ -13,6 +13,7 @@ points = []
 scale_factor = 1.0  
 img = None
 img_tk = None
+crop_mode = False
 
 def load_image():
     """Завантажити зображення з файлу."""
@@ -53,7 +54,11 @@ def update_image():
         result_label.config(text=f"Відстань: {distance:.2f} м, Азимут: {azimuth:.2f}°")
 
 def on_click(event):
-    if len(points) < 2:
+    global crop_mode
+    if crop_mode:
+        crop_to_point(event.x)
+        crop_mode = False
+    elif len(points) < 2:
         points.append((event.x / scale_factor, event.y / scale_factor))  
         canvas.create_oval(event.x-2, event.y-2, event.x+2, event.y+2, fill='red')
         if len(points) == 2:
@@ -84,14 +89,10 @@ def calculate_azimuth():
     x1, y1 = points[0]
     x2, y2 = points[1]
 
-    # Обчислюємо відносні координати
     delta_x = x2 - x1
     delta_y = y2 - y1
 
-    # Обчислення азимута у градусах
     azimuth = math.degrees(math.atan2(delta_y, delta_x))
-
-    # Додаємо 90 градусів, щоб північ була вгорі
     azimuth = (azimuth + 90) % 360
 
     return azimuth
@@ -112,6 +113,22 @@ def zoom_out(event):
     scale_factor *= 0.9  
     update_image()
 
+def crop_to_point(x_click):
+    """Обрізати зображення по правому краю до обраної точки."""
+    global img, img_tk
+    if img is not None:
+        right_crop = x_click / scale_factor
+        cropped_img = img.crop((0, 0, min(right_crop, img.width), img.height))
+        img = cropped_img  # Оновлюємо зображення
+        update_image()
+
+def activate_crop_mode():
+    """Активувати режим обрізки зображення."""
+    global crop_mode
+    crop_mode = True
+    result_label.config(text="Клацніть на зображення, щоб обрізати по правому краю.")
+
+# Кнопки та елементи інтерфейсу
 load_button = tk.Button(root, text="Завантажити зображення", command=load_image)
 load_button.pack()
 
@@ -120,6 +137,9 @@ paste_button.pack()
 
 reset_button = tk.Button(root, text="Скинути", command=reset_image)
 reset_button.pack()
+
+crop_button = tk.Button(root, text="Обрізати", command=activate_crop_mode)
+crop_button.pack()
 
 tk.Label(root, text="Масштаб (метрів у клітинці):").pack()
 scale_entry = tk.Entry(root)
