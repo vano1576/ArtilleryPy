@@ -98,10 +98,17 @@ def calculate_azimuth():
     return azimuth
 
 def reset_image():
-    canvas.delete("all")
-    points.clear()
-    result_label.config(text="Відстань: ")
-    scale_entry.delete(0, tk.END)
+    """Скинути зображення та точки, зберігаючи поточний масштаб та значення масштабу у полі."""
+    global img_tk, points
+    if img is not None:
+        # Reload the original image without modifying scale_factor
+        img_tk = ImageTk.PhotoImage(img.resize((int(img.width * scale_factor), int(img.height * scale_factor)), Image.LANCZOS))
+        canvas.config(width=img_tk.width(), height=img_tk.height())
+        canvas.create_image(0, 0, anchor=tk.NW, image=img_tk)
+
+    canvas.delete("all")  # Clears all points and image from canvas
+    points.clear()  # Clear points
+    result_label.config(text="Відстань: ")  # Reset label text
 
 def zoom_in(event):
     global scale_factor
