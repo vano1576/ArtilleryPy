@@ -11,6 +11,8 @@ canvas.pack()
 
 points = []
 scale_factor = 1.0  
+min_scale = 0.5  # Мінімальний масштаб
+max_scale = 5.0  # Максимальний масштаб
 img = None
 img_tk = None
 crop_mode = False
@@ -110,14 +112,15 @@ def reset_image():
     points.clear()  # Clear points
     result_label.config(text="Відстань: ")  # Reset label text
 
-def zoom_in(event):
+def zoom(event):
+    """Масштабування за допомогою колеса миші."""
     global scale_factor
-    scale_factor *= 1.1  
-    update_image()
-
-def zoom_out(event):
-    global scale_factor
-    scale_factor *= 0.9  
+    if event.delta > 0:
+        scale_factor *= 1.1
+    else:
+        scale_factor *= 0.9
+    
+    scale_factor = max(min_scale, min(max_scale, scale_factor))  # Обмеження масштабування
     update_image()
 
 def crop_to_point(x_click):
@@ -156,7 +159,6 @@ result_label = tk.Label(root, text="Відстань: ")
 result_label.pack()
 
 canvas.bind("<Button-1>", on_click)
-root.bind("<Up>", zoom_in)   
-root.bind("<Down>", zoom_out) 
+canvas.bind("<MouseWheel>", zoom)  # Обробник події для масштабування колесом миші
 
 root.mainloop()
